@@ -22,12 +22,17 @@ def process_file(file_path):
             df = df.withColumn(column_name, trim(col(column_name)))
 
     """Writing the file to an output would go here (df.write.csv)"""
+    df.take(3) # Only take the top 3 rows for now
     print(f"Processed and saved cleaned file: {file_path}")
 
 
 def clean_data_tables():
     """Clean all string columns in bucket by iterating over all csv files"""
-    spark = SparkSession.builder.appName("PublicGCSRead").getOrCreate()
+    spark = SparkSession.builder\
+                        .appName("PublicGCSRead")\
+                        .config("spark.jars", "https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar")\
+                        .getOrCreate()
+
     bucket = getenv('BUCKET_NAME')
 
     # Load all files
@@ -43,3 +48,5 @@ def clean_data_tables():
 
     print("All files processed successfully")
 
+if __name__ == '__main__':
+    clean_data_tables()
