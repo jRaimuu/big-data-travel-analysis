@@ -15,9 +15,9 @@ def load_data():
     edmonton_now = utc_now.astimezone(edmonton_tz) 
     dt = edmonton_now.strftime("%Y-%m-%d %H:%M")
 
-    BUCKET_NAME = "travel-analysis-bucket"
+    BUCKET_NAME = os.getenv("BUCKET_NAME")
     FILE_PATH = f"file_name {dt}.csv"
-
+    
     gcs_path = f"gs://{BUCKET_NAME}/{FILE_PATH}"
     print(gcs_path)
 
