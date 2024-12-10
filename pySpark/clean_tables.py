@@ -7,15 +7,6 @@ from gcsfs import GCSFileSystem
 from os import getenv
 
 
-def create_spark_session():
-    """Creates and returns a spark session"""
-    return SparkSession.builder \
-    .appName("FetchDataFromGCS") \
-    .config("spark.hadoop.google.cloud.auth.service.account.enable", "true") \
-    .config("spark.hadoop.google.cloud.auth.service.account.json.keyfile", "path/to/your-service-account-key.json") \
-    .getOrCreate()
-
-
 def load_bucket_files(bucket):
     """Takes a bucket name and loads all the files in a google cloud bucket"""
     return GCSFileSystem().ls(bucket)
