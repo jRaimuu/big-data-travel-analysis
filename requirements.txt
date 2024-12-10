@@ -7,3 +7,4 @@ python-dotenv
 apache-airflow
 gcsfs
 pytz
+pyspark
