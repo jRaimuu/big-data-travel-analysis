@@ -8,8 +8,7 @@ import datetime
 import pytz
 
 def fetch_co2_data():
-    # GCS bucket details
-    BUCKET_NAME = "travel-analysis-bucket"
+    BUCKET_NAME = os.getenv('BUCKET_NAME')
     DATA_FILE_PATH = f"annual_co2_emissions.csv"
 
     # Fetch the CO2 emissions data
