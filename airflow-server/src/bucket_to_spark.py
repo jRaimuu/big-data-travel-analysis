@@ -1,4 +1,5 @@
 from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 import os
 from dotenv import load_dotenv
 
@@ -11,15 +12,34 @@ spark-submit \
 '''
 load_dotenv()
 
-BUCKET_NAME = os.getenv("BUCKET_NAME")
-FILE_NAME = os.getenv("FILE_NAME")
+def bucket_sparkdf():
+    """
+    serves to demonstrate how to load data from a gcs bucket into a spark dataframe
+    """
 
-spark = SparkSession.builder \
-    .appName('GCSFilesRead') \
-    .getOrCreate()
+    BUCKET_NAME = os.getenv("BUCKET_NAME")
+    FILE_NAME = os.getenv("FILE_NAME")
 
-# load data from the public GCS bucket
-df = spark.read.csv(f"gs://{BUCKET_NAME}/{FILE_NAME}", header=True, inferSchema=True)
+    spark = SparkSession.builder \
+        .appName('GCSFilesRead') \
+        .config("spark.jars", "https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar") \
+        .getOrCreate()
 
-df.printSchema()
-df.show()
+
+    # load data from the public GCS bucket
+    spark_df = spark.read.csv(f"gs://{BUCKET_NAME}/{FILE_NAME}", header=True, inferSchema=True)
+    # spark_df.printSchema()
+    spark_df.show()
+
+    # rename column
+    spark_df = spark_df.withColumnRenamed("Annual COâ\x82\x82 emissions", "Annual_CO2_emissions")
+
+    df_average_co2 = (
+        spark_df
+        .groupBy("Entity")
+        .agg(F.max("Annual_CO2_emissions").alias("max_CO2_emissions"))
+        .sort("max_CO2_emissions")
+    )
+    print(df_average_co2.show())
+
+bucket_sparkdf()
