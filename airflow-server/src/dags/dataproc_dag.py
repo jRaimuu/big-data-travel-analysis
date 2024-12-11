@@ -65,9 +65,10 @@ with DAG(
     submit_spark_job = DataprocSubmitJobOperator(
         task_id="submit_spark_job",
         job=PYSPARK_JOB,
-        location=REGION,
+        region=REGION,
         project_id=PROJECT_ID,
     )
+
 
     # delete Dataproc cluster
     delete_cluster = DataprocDeleteClusterOperator(
