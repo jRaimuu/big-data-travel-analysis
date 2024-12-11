@@ -3,6 +3,7 @@ from pyspark.sql import functions as F
 import os
 from dotenv import load_dotenv
 
+
 '''
 To run this file locally, enter this in the command line:
 spark-submit \
@@ -19,6 +20,7 @@ def bucket_sparkdf():
 
     BUCKET_NAME = os.getenv("BUCKET_NAME")
     FILE_NAME = os.getenv("FILE_NAME")
+    OUTPUT_PATH  = f"gs://{BUCKET_NAME}/test_dataproc"
 
     spark = SparkSession.builder \
         .appName('GCSFilesRead') \
@@ -41,5 +43,9 @@ def bucket_sparkdf():
         .sort("max_CO2_emissions")
     )
     print(df_average_co2.show())
+
+    # writing to GCS
+    df_average_co2.write.csv(OUTPUT_PATH, header=True, mode="overwrite")
+
 
 bucket_sparkdf()
