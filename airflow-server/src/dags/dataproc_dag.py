@@ -11,7 +11,7 @@ import os
 load_dotenv()
 
 # constants
-PROJECT_ID = "test_travel_pipeline"
+PROJECT_ID = os.getenv("PROJECT_ID")
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 CLUSTER_NAME = "spark_travel_cluster"
 REGION = "us-central1"
@@ -19,8 +19,8 @@ REGION = "us-central1"
 CLUSTER_CONFIG = ClusterGenerator(
     project_id=PROJECT_ID,
     zone="us-central1-a",
-    master_machine_type="n1-standard-2",
-    worker_machine_type="n1-standard-2",
+    master_machine_type="n1-standard-1",
+    worker_machine_type="n1-standard-1",
     num_workers=2,
     worker_disk_size=10,
     master_disk_size=20,
