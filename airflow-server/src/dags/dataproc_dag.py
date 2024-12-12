@@ -33,7 +33,7 @@ CLUSTER_CONFIG = ClusterGenerator(
         "service_account": SERVICE_ACCOUNT,
     },
     initialization_actions=[
-        f"gs://{BUCKET_NAME}/scripts/dependencies/install_dependencies.sh"
+        {"executable_file": f"gs://{BUCKET_NAME}/scripts/dependencies/install_dependencies.sh"} # install dotenv
     ],
 ).make()
 
