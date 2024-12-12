@@ -11,8 +11,6 @@ import os
 load_dotenv()
 
 # constants
-SUB_URI = os.getenv("SUB_URI")
-SERVICE_ACCOUNT = os.getenv("SERVICE_ACCOUNT")
 PROJECT_ID = os.getenv("PROJECT_ID")
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 CLUSTER_NAME = "travel-spark-cluster"
@@ -26,27 +24,13 @@ CLUSTER_CONFIG = ClusterGenerator(
     num_workers=2,
     worker_disk_size=30,
     master_disk_size=30,
-    storage_bucket=BUCKET_NAME,
     gce_cluster_config={
-        "subnetwork_uri": SUB_URI,       
+        "subnetwork_uri": "projects/phonic-sunbeam-443308-r6/regions/us-central1/subnetworks/default",       
         "internal_ip_only": True,
-        "service_account": SERVICE_ACCOUNT,
+        "service_account": "1017993515337-compute@developer.gserviceaccount.com",
     },
-    initialization_actions=[
-        f"gs://{BUCKET_NAME}/scripts/dependencies/install_dependencies.sh"
-    ],
+   staging_bucket=BUCKET_NAME,
 ).make()
-
-PYSPARK_JOB = {
-    "reference": {"project_id": PROJECT_ID},
-    "placement": {"cluster_name": CLUSTER_NAME},
-    "pyspark_job": {
-        "main_python_file_uri": f"gs://{BUCKET_NAME}/scripts/jobs/bucket_to_spark.py",
-        "python_file_uris": [
-            f"gs://{BUCKET_NAME}/scripts/dependencies/bucket_to_spark.env"
-        ], 
-    },
-}
 
 default_args = {
     'start_date': days_ago(1),
@@ -71,15 +55,6 @@ with DAG(
         cluster_config=CLUSTER_CONFIG,
     )
 
-    # submit Spark job
-    submit_spark_job = DataprocSubmitJobOperator(
-        task_id="submit_spark_job",
-        job=PYSPARK_JOB,
-        region=REGION,
-        project_id=PROJECT_ID,
-    )
-
-
     # delete Dataproc cluster
     delete_cluster = DataprocDeleteClusterOperator(
         task_id="delete_cluster",
@@ -90,4 +65,4 @@ with DAG(
     )
 
     # task dependencies
-    create_cluster >> submit_spark_job >> delete_cluster
+    create_cluster >> delete_cluster

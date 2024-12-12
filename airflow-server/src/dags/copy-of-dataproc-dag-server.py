@@ -11,8 +11,6 @@ import os
 load_dotenv()
 
 # constants
-SUB_URI = os.getenv("SUB_URI")
-SERVICE_ACCOUNT = os.getenv("SERVICE_ACCOUNT")
 PROJECT_ID = os.getenv("PROJECT_ID")
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 CLUSTER_NAME = "travel-spark-cluster"
@@ -28,13 +26,10 @@ CLUSTER_CONFIG = ClusterGenerator(
     master_disk_size=30,
     storage_bucket=BUCKET_NAME,
     gce_cluster_config={
-        "subnetwork_uri": SUB_URI,       
+        "subnetwork_uri": "projects/phonic-sunbeam-443308-r6/regions/us-central1/subnetworks/default",       
         "internal_ip_only": True,
-        "service_account": SERVICE_ACCOUNT,
+        "service_account": "1017993515337-compute@developer.gserviceaccount.com",
     },
-    initialization_actions=[
-        f"gs://{BUCKET_NAME}/scripts/dependencies/install_dependencies.sh"
-    ],
 ).make()
 
 PYSPARK_JOB = {
