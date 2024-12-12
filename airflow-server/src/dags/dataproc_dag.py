@@ -13,7 +13,7 @@ load_dotenv()
 # constants
 PROJECT_ID = os.getenv("PROJECT_ID")
 BUCKET_NAME = os.getenv("BUCKET_NAME")
-CLUSTER_NAME = "spark-cluster"
+CLUSTER_NAME = "SparkCluster"
 REGION = "us-central1"
 
 CLUSTER_CONFIG = ClusterGenerator(
