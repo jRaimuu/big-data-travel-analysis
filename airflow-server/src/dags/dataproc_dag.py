@@ -53,7 +53,6 @@ default_args = {
     'retries': 1,
 }
 
-
 # DAG definition
 with DAG(
     'dataproc_spark_job',
@@ -78,7 +77,6 @@ with DAG(
         region=REGION,
         project_id=PROJECT_ID,
     )
-
 
     # delete Dataproc cluster
     delete_cluster = DataprocDeleteClusterOperator(
