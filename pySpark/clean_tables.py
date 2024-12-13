@@ -44,7 +44,7 @@ def clean_data_tables():
     disease_death_replaced = disease_death.replace('United States of America', 'United States', ['name'])
 
     # Aggregated disease_death
-    disease_death_year = disease_death.groupBy(['name', 'year']).agg(sum('val').alias('deaths_value'))
+    disease_death_year = disease_death.groupBy(['name', 'year']).agg(sum('val').alias('disease_death_val'))
 
     # Aggregated surface temp data by average
     yearly_monthly_surface_temp_full = average_monthly_surface_temp_full.filter(month(average_monthly_surface_temp_full.Day) == 1)
@@ -74,6 +74,7 @@ def clean_data_tables():
     # Make all the columns snake case
     for col_name in infrastructure_selected:
         infrastructure = infrastructure_selected.withColumnRenamed(col_name.lower().replace(' ', '_'))
+
 
     # The data will be grouped into the following tables:
     # Climate by year (Includes aggregates)
@@ -143,7 +144,7 @@ def clean_data_tables():
 
 
     # Rename columns
-    new_column_names = {
+    climate_names = {
         'Entity': 'name', 
         'Code': 'country_code', 
         'Year': 'year', 
@@ -151,19 +152,24 @@ def clean_data_tables():
         'Annual greenhouse gas emissions in COâ equivalents': 'ghe_co_equivalent', 
         'Deforestation as share of forest area': 'deforestation_by_forest_area', 
         'wildfire': 'tree_loss_from_wildfires',
+        'temperature_2m.1': 'avg_yearly_surface_temp',
+    }
+    
+    for old_col, new_col in climate_names.items():
+        climate_year = climate_year.withColumnRenamed(old_col, new_col)
+
+    health_econ_names = {
         'ny_gdp_pcap_pp_kd': 'gdp_ppp_per_capita', 
         'ny_gdp_pcap_kd': 'nominal_gdp_ppp_per_capita',
         'fp_cpi_totl_zg': 'inflation_rate_cpi_based', 
         'value__category_total__sex_total__age_total__unit_of_measurement_rate_per_100_000_population': 'crime_rate', 
-        'outbound_exp_us_cpi_adjust': 'intl_tourist_spending', 
         'death_count__age_group_allages__sex_both_sexes__cause_natural_disasters': 'natural_disaster_deaths',
     }
-    
-    for old_col, new_col in new_column_names.items():
-        country_stats_owid = country_stats_owid.withColumnRenamed(old_col, new_col)
 
-    # Show the result
-    print(country_stats_owid.head(1))
+    for old_col, new_col in health_econ_year.items():
+        health_econ_year = health_econ_year.withColumnRenamed(old_col, new_col)
+
+    tourism_year = tourism_year.withColumnRenamed('outbound_exp_us_cpi_adjust', 'intl_tourist_spending')
 
     # Load all files
     # files = GCSFileSystem().ls(f"gs://{bucket}/")
