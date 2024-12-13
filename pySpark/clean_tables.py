@@ -21,6 +21,9 @@ def clean_data_tables():
                         .config("spark.hadoop.google.cloud.auth.null.enable", "true") \
                         .getOrCreate()
 
+
+    # Reading all data from bucket
+
     # Read the data from our wolrd in data as it all has the same schema
     annual_co2 = spark.read.csv(f"gs://{bucket}/annual_co2_emissions.csv", header=True, inferSchema=True)
     annual_ghe = spark.read.csv(f"gs://{bucket}/annual_ghe.csv", header=True, inferSchema=True)
@@ -40,10 +43,12 @@ def clean_data_tables():
     disease_death_renamed = disease_death.withColumnRenamed('location_name', 'name')
     disease_death_replaced = disease_death.replace('United States of America', 'United States', ['name'])
 
+    # Aggregated disease_death
+    disease_death_year = disease_death.groupBy(['name', 'year']).agg(sum('val').alias('deaths_value'))
+
     # Aggregated surface temp data by average
     yearly_monthly_surface_temp_full = average_monthly_surface_temp_full.filter(month(average_monthly_surface_temp_full.Day) == 1)
-    yearly_monthly_surface_temp = yearly_monthly_surface_temp_full.select('Entity', 'Code', 'year', 'temperature_2m.1')
-    yearly_monthly_surface_temp_replaced = yearly_monthly_surface_temp.withColumnRenamed('Entity', 'name')
+    yearly_monthly_surface_temp = yearly_monthly_surface_temp_full.select('Entity', 'Code', 'Year', 'temperature_2m.1')
 
     internet_penetration = spark.read.csv(internet_penetration_rate.csv, header=True, inferSchema=True)
     internet_penetration = internet_penetration\
@@ -68,7 +73,7 @@ def clean_data_tables():
     
     # Make all the columns snake case
     for col_name in infrastructure_selected:
-        infrastructure_renamed = infrastructure_selected.withColumnRenamed(col_name.lower().replace(' ', '_'))
+        infrastructure = infrastructure_selected.withColumnRenamed(col_name.lower().replace(' ', '_'))
 
     # The data will be grouped into the following tables:
     # Climate by year (Includes aggregates)
@@ -76,10 +81,9 @@ def clean_data_tables():
     # Tourism by year
     # Monthly rainfall (Not aggregated)
     # Disease death (Not aggregated)
-    # Infrastucture
+    # Infrastructure
 
-    # Join all the Our World in Data Tables (OWID) (Drop the duplicate columns)
-    country_stats_owid = annual_co2 \
+    climate_year = annual_co2 \
             .join(annual_ghe, (annual_co2.Entity == annual_ghe.Entity) & (annual_co2.Year == annual_ghe.Year), 'left')\
             .drop(annual_ghe.Entity, annual_ghe.Year, annual_ghe.Code) \
             .join(annual_deforest, (annual_co2.Entity == annual_deforest.Entity) & (annual_co2.Year == annual_deforest.Year), 'left')\
@@ -90,19 +94,53 @@ def clean_data_tables():
             .drop(energy_consumption.Entity, energy_consumption.Year, energy_consumption.Code) \
             .join(average_precipitation, (annual_co2.Entity == average_precipitation.Entity) & (annual_co2.Year == average_precipitation.Year), 'left')\
             .drop(average_precipitation.Entity, average_precipitation.Year, average_precipitation.Code) \
-            .join(gdp_ppp_per_capita, (annual_co2.Entity == gdp_ppp_per_capita.Entity) & (annual_co2.Year == gdp_ppp_per_capita.Year), 'left')\
+            .join(
+                yearly_monthly_surface_temp_replaced, 
+                (annual_co2.Entity == yearly_monthly_surface_temp_replaced.Entity) \
+                    & (annual_co2.Year == yearly_monthly_surface_temp_replaced.Year), 
+                'left')\
+            .drop(
+                yearly_monthly_surface_temp_replaced.Entity, 
+                yearly_monthly_surface_temp_replaced.Year, 
+                yearly_monthly_surface_temp_replaced.Code)
+
+
+    health_econ_year = crime_rate
+            .join(
+                gdp_ppp_per_capita, 
+                (crime_rate.Entity == gdp_ppp_per_capita.Entity) & (crime_rate.Year == gdp_ppp_per_capita.Year), 
+                'right')\
             .drop(gdp_ppp_per_capita.Entity, gdp_ppp_per_capita.Year, gdp_ppp_per_capita.Code) \
-            .join(gdp_nominal_per_capita, (annual_co2.Entity == gdp_nominal_per_capita.Entity) & (annual_co2.Year == gdp_nominal_per_capita.Year), 'left')\
+            .join(
+                gdp_nominal_per_capita, 
+                (crime_rate.Entity == gdp_nominal_per_capita.Entity) & (crime_rate.Year == gdp_nominal_per_capita.Year), 
+                'left')\
             .drop(gdp_nominal_per_capita.Entity, gdp_nominal_per_capita.Year, gdp_nominal_per_capita.Code) \
-            .join(inflation_rate, (annual_co2.Entity == inflation_rate.Entity) & (annual_co2.Year == inflation_rate.Year), 'left')\
+            .join(inflation_rate, (crime_rate.Entity == inflation_rate.Entity) & (crime_rate.Year == inflation_rate.Year), 'left')\
             .drop(inflation_rate.Entity, inflation_rate.Year, inflation_rate.Code) \
-            .join(crime_rate, (annual_co2.Entity == crime_rate.Entity) & (annual_co2.Year == crime_rate.Year), 'left')\
-            .drop(crime_rate.Entity, crime_rate.Year, crime_rate.Code) \
-            .join(intl_tourist_spending, (annual_co2.Entity == intl_tourist_spending.Entity) & (annual_co2.Year == intl_tourist_spending.Year), 'left')\
-            .drop(intl_tourist_spending.Entity, intl_tourist_spending.Year, intl_tourist_spending.Code) \
-            .join(natural_disaster_death, (annual_co2.Entity == natural_disaster_death.Entity) & (annual_co2.Year == natural_disaster_death.Year), 'left')\
+            .join(
+                natural_disaster_death, 
+                (crime_rate.Entity == natural_disaster_death.Entity) & \
+                    (crime_rate.Year == natural_disaster_death.Year), 
+                'left')\
             .drop(natural_disaster_death.Entity, natural_disaster_death.Year, natural_disaster_death.Code)\
-            .join(international_tourist_trips, (annual_co2.Entity == international_tourist_trips.Entity) & (annual_co2.Year == international_tourist_trips.Year), 'left')\
+            .join(
+                internet_penetration, 
+                (crime_rate.Entity == internet_penetration.Entity) & (crime_rate.Year == internet_penetration.Year), 
+                'left')\
+            .drop(internet_penetration.Entity, internet_penetration.Year, internet_penetration.Code)
+            .join(disease_death_year, (crime_rate.Entity == disease_death_year.name) & (crime_rate.Year == disease_death_year.name), 'left')\
+            .drop(disease_death_year.Entity, disease_death_year.Year, disease_death_year.Code)
+
+
+    tourism_year = intl_tourist_spending\
+            .join(
+                international_tourist_trips, 
+                (international_tourist_trips.Entity == intl_tourist_spending.Entity) & \
+                    (international_tourist_trips.Year == intl_tourist_spending.Year), 
+                'left')\
+            .drop(inflation_rate.Entity, inflation_rate.Year, inflation_rate.Code)
+
 
     # Rename columns
     new_column_names = {
