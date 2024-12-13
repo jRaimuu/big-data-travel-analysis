@@ -11,20 +11,30 @@ import os
 load_dotenv()
 
 # constants
+SUB_URI = os.getenv("SUB_URI")
+SERVICE_ACCOUNT = os.getenv("SERVICE_ACCOUNT")
 PROJECT_ID = os.getenv("PROJECT_ID")
 BUCKET_NAME = os.getenv("BUCKET_NAME")
-CLUSTER_NAME = "SparkCluster"
+CLUSTER_NAME = "travel-spark-cluster"
 REGION = "us-central1"
 
 CLUSTER_CONFIG = ClusterGenerator(
     project_id=PROJECT_ID,
     zone="us-central1-a",
-    master_machine_type="n1-standard-1",
-    worker_machine_type="n1-standard-1",
+    master_machine_type="n1-standard-2",
+    worker_machine_type="n1-standard-2",
     num_workers=2,
-    worker_disk_size=10,
-    master_disk_size=20,
+    worker_disk_size=30,
+    master_disk_size=30,
     storage_bucket=BUCKET_NAME,
+    gce_cluster_config={
+        "subnetwork_uri": SUB_URI,       
+        "internal_ip_only": True,
+        "service_account": SERVICE_ACCOUNT,
+    },
+    initialization_actions=[
+        {"executable_file": f"gs://{BUCKET_NAME}/scripts/dependencies/install_dependencies.sh"} # install dotenv
+    ],
 ).make()
 
 PYSPARK_JOB = {
@@ -42,7 +52,6 @@ default_args = {
     'start_date': days_ago(1),
     'retries': 1,
 }
-
 
 # DAG definition
 with DAG(
@@ -68,7 +77,6 @@ with DAG(
         region=REGION,
         project_id=PROJECT_ID,
     )
-
 
     # delete Dataproc cluster
     delete_cluster = DataprocDeleteClusterOperator(
