@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StringType
-from pyspark.sql.functions import col, trim
+from pyspark.sql.functions import month
 
 from dotenv import load_dotenv
 from os import getenv, path
@@ -13,7 +13,7 @@ def clean_data_tables():
     load_dotenv(dotenv_path)
     bucket = getenv('BUCKET_NAME')
 
-    spark_csv = SparkSession.builder\
+    spark = SparkSession.builder\
                         .appName("Clean DSV Data")\
                         .config("spark.jars", "https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar")\
                         .config("spark.hadoop.fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem") \
@@ -22,18 +22,61 @@ def clean_data_tables():
                         .getOrCreate()
 
     # Read the data from our wolrd in data as it all has the same schema
-    annual_co2 = spark_csv.read.csv(f"gs://{bucket}/annual_co2_emissions.csv", header=True, inferSchema=True)
-    annual_ghe = spark_csv.read.csv(f"gs://{bucket}/annual_ghe.csv", header=True, inferSchema=True)
-    annual_deforest = spark_csv.read.csv(f"gs://{bucket}/annual_deforest.csv", header=True, inferSchema=True)
-    tree_cover_loss_wildfires = spark_csv.read.csv(f"gs://{bucket}/tree_cover_loss_wildfires.csv", header=True, inferSchema=True)
-    energy_consumption = spark_csv.read.csv(f"gs://{bucket}/energy_consumption.csv", header=True, inferSchema=True)
-    average_precipitation = spark_csv.read.csv(f"gs://{bucket}/average_precipitation.csv", header=True, inferSchema=True)
-    gdp_ppp_per_capita = spark_csv.read.csv(f"gs://{bucket}/gdp_ppp_per_capita.csv", header=True, inferSchema=True)
-    gdp_nominal_per_capita = spark_csv.read.csv(f"gs://{bucket}/gdp_nominal_per_capita.csv", header=True, inferSchema=True)
-    inflation_rate = spark_csv.read.csv(f"gs://{bucket}/inflation_rate.csv", header=True, inferSchema=True)
-    crime_rate = spark_csv.read.csv(f"gs://{bucket}/crime_rate.csv", header=True, inferSchema=True)
-    intl_tourist_spending = spark_csv.read.csv(f"gs://{bucket}/intl_tourist_spending.csv", header=True, inferSchema=True)
-    natural_disaster_death = spark_csv.read.csv(f"gs://{bucket}/natural_disaster_death.csv", header=True, inferSchema=True)
+    annual_co2 = spark.read.csv(f"gs://{bucket}/annual_co2_emissions.csv", header=True, inferSchema=True)
+    annual_ghe = spark.read.csv(f"gs://{bucket}/annual_ghe.csv", header=True, inferSchema=True)
+    annual_deforest = spark.read.csv(f"gs://{bucket}/annual_deforest.csv", header=True, inferSchema=True)
+    tree_cover_loss_wildfires = spark.read.csv(f"gs://{bucket}/tree_cover_loss_wildfires.csv", header=True, inferSchema=True)
+    energy_consumption = spark.read.csv(f"gs://{bucket}/energy_consumption.csv", header=True, inferSchema=True)
+    average_precipitation = spark.read.csv(f"gs://{bucket}/average_precipitation.csv", header=True, inferSchema=True)
+    gdp_ppp_per_capita = spark.read.csv(f"gs://{bucket}/gdp_ppp_per_capita.csv", header=True, inferSchema=True)
+    gdp_nominal_per_capita = spark.read.csv(f"gs://{bucket}/gdp_nominal_per_capita.csv", header=True, inferSchema=True)
+    inflation_rate = spark.read.csv(f"gs://{bucket}/inflation_rate.csv", header=True, inferSchema=True)
+    crime_rate = spark.read.csv(f"gs://{bucket}/crime_rate.csv", header=True, inferSchema=True)
+    intl_tourist_spending = spark.read.csv(f"gs://{bucket}/intl_tourist_spending.csv", header=True, inferSchema=True)
+    natural_disaster_death = spark.read.csv(f"gs://{bucket}/natural_disaster_death.csv", header=True, inferSchema=True)
+    international_tourist_trips = spark.read.csv(f"gs://{bucket}/international_tourist_trips.csv", header=True, inferSchema=True)
+
+    disease_death = spark.read.csv(f"gs://{bucket}/disease_death.csv")
+    disease_death_renamed = disease_death.withColumnRenamed('location_name', 'name')
+    disease_death_replaced = disease_death.replace('United States of America', 'United States', ['name'])
+
+    # Aggregated surface temp data by average
+    yearly_monthly_surface_temp_full = average_monthly_surface_temp_full.filter(month(average_monthly_surface_temp_full.Day) == 1)
+    yearly_monthly_surface_temp = yearly_monthly_surface_temp_full.select('Entity', 'Code', 'year', 'temperature_2m.1')
+    yearly_monthly_surface_temp_replaced = yearly_monthly_surface_temp.withColumnRenamed('Entity', 'name')
+
+    internet_penetration = spark.read.csv(internet_penetration_rate.csv, header=True, inferSchema=True)
+    internet_penetration = internet_penetration\
+        .withColumnRenamed('it_net_user_zs', 'internet_user_score')\
+        .withColumnRenamed('entity', 'name')\
+        .withColumnRenamed('Year', 'year')
+
+    # Monthly surface temp data
+    average_monthly_surface_temp_full = spark_csv.read.csv(f"gs://{bucket}/average_monthly_surface_temp.csv", header=True, inferSchema=True)
+    average_monthly_surface_temp = average_monthly_surface_temp_full.select('Entity', 'Code', 'year', 'temperature_2m')
+    average_monthly_surface_temp_renamed = average_monthly_surface_temp.withColumnRenamed('Entity', 'name')
+
+    # Data that is not yearly
+    world_heritage_sites = spark_csv.read.csv(f"gs://{bucket}/unesco_whs_by_country.csv", header=True, inferSchema=True)
+    world_heritage_sites_renamed = world_heritage_sites\
+        .withColumnRenamed('Total sites', 'heritage_sites')\
+        .withColumnRenamed('Country', 'name')
+
+    infrastructure = spark.read.csv(f"gs://{bucket}/infrastructure.csv", header=True, inferSchema=True)
+    infrastructure_selected = infrastructure.select('Country', 'Overall Infrastructure Score', 'Basic Infrastructure Score', \
+        'Technological Infrastructure Score', 'Scientific Infrastructure Score', 'Health and Environment Score', 'Education Score')
+    
+    # Make all the columns snake case
+    for col_name in infrastructure_selected:
+        infrastructure_renamed = infrastructure_selected.withColumnRenamed(col_name.lower().replace(' ', '_'))
+
+    # The data will be grouped into the following tables:
+    # Climate by year (Includes aggregates)
+    # Health and Economy by year (Includes aggregates)
+    # Tourism by year
+    # Monthly rainfall (Not aggregated)
+    # Disease death (Not aggregated)
+    # Infrastucture
 
     # Join all the Our World in Data Tables (OWID) (Drop the duplicate columns)
     country_stats_owid = annual_co2 \
@@ -58,7 +101,8 @@ def clean_data_tables():
             .join(intl_tourist_spending, (annual_co2.Entity == intl_tourist_spending.Entity) & (annual_co2.Year == intl_tourist_spending.Year), 'left')\
             .drop(intl_tourist_spending.Entity, intl_tourist_spending.Year, intl_tourist_spending.Code) \
             .join(natural_disaster_death, (annual_co2.Entity == natural_disaster_death.Entity) & (annual_co2.Year == natural_disaster_death.Year), 'left')\
-            .drop(natural_disaster_death.Entity, natural_disaster_death.Year, natural_disaster_death.Code)
+            .drop(natural_disaster_death.Entity, natural_disaster_death.Year, natural_disaster_death.Code)\
+            .join(international_tourist_trips, (annual_co2.Entity == international_tourist_trips.Entity) & (annual_co2.Year == international_tourist_trips.Year), 'left')\
 
     # Rename columns
     new_column_names = {
@@ -80,19 +124,8 @@ def clean_data_tables():
     for old_col, new_col in new_column_names.items():
         country_stats_owid = country_stats_owid.withColumnRenamed(old_col, new_col)
 
-    world_heritage_sites = spark_csv.read.csv(f"gs://{bucket}/unesco_whs_by_country.csv", header=True, inferSchema=True)
-    
-
     # Show the result
     print(country_stats_owid.head(1))
-
-    """
-        3. average_monthly_surface_temp.csv
-        7. disease_death.csv
-        12. infrastructure.csv
-        13. international_tourist_trips.csv
-        14. internet_penetration_rate.csv
-    """
 
     # Load all files
     # files = GCSFileSystem().ls(f"gs://{bucket}/")
