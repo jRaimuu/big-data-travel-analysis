@@ -1,3 +1,4 @@
+from email import header
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, trim
 from gcsfs import GCSFileSystem
@@ -10,7 +11,7 @@ spark-submit \
     clean_tables.py
 '''
 
-def read_and_clean_csv(spark, file_path):
+def read_and_clean_csv(spark, file_path, output_path):
     """Reads CSVs, cleans them, and exports them"""
     print(f"Reading and cleaning {file_path}")
     df  = spark.read.csv(file_path, header=True, inferSchema=True)
@@ -19,8 +20,10 @@ def read_and_clean_csv(spark, file_path):
         if column_type == "string":
             df = df.withColumn(column_name, trim(col(column_name)))
 
-    print(f'Cleaned all string type data for {file_path}')
-    df.show(5)
+    output_file_path = f"{output_path}/{file_path.split('/')[-1]}"
+    
+    df.write.csv(output_file_path, header=True, mode='overwrite')
+    print(f'Cleaned all string type data for {file_path}, and exported to {output_file_path}')
 
 
 def clean_data_tables():
@@ -36,10 +39,10 @@ def clean_data_tables():
     
     files = GCSFileSystem().ls(f"gs://{bucket}/")
     csv_files_paths = [f"gs://{file}" for file in files if file.endswith(".csv")]
+    output_path = f"gs://{bucket}/cleaned"
 
     for file_path in csv_files_paths:
-        read_and_clean_csv(spark, file_path)
-
+        read_and_clean_csv(spark, file_path, output_path)
 
 if __name__ == '__main__':
     clean_data_tables()

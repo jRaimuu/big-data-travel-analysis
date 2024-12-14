@@ -12,7 +12,7 @@ spark-submit \
 
 def aggregate_data_tables():
     """Aggregates data from multiple CSV files in a Google Cloud Storage bucket into structured tables for analysis"""
-    bucket = "travel-analysis-bucket"
+    bucket = "travel-analysis-bucket/cleaned"
 
     spark = SparkSession.builder\
                         .appName("Data Warehouse Aggreagetion")\
@@ -219,11 +219,11 @@ def aggregate_data_tables():
     tourism_year.show(5)
     tourism_year.describe()
 
-    print("\nAverage Monthly Surface Temperate by Year Table:")
+    print("\nAverage Monthly Surface Temperate Table:")
     average_monthly_surface_temp_renamed.show(5)
     average_monthly_surface_temp_renamed.describe()
 
-    print("\nDisease Death by Year Table:")
+    print("\nDisease Death Rate Table:")
     disease_death_replaced.show(5)
     disease_death_replaced.describe()
 
