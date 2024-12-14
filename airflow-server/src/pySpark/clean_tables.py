@@ -79,27 +79,34 @@ def clean_data_tables():
     # Data that is not yearly
     world_heritage_sites = spark.read.csv(f"gs://{bucket}/unesco_whs_by_country.csv", header=True, inferSchema=True)
     world_heritage_sites_renamed = world_heritage_sites\
-        .withColumnRenamed('Total sites', 'heritage_site_count')
-    world_heritage_sites_selected = world_heritage_sites_renamed.select('heritage_site_count', 'Country')
+        .withColumnRenamed('Total sites', 'heritage_site_count')\
+        .withColumnRenamed('Country', 'UNESCO_Country')
+    world_heritage_sites_selected = world_heritage_sites_renamed.select('heritage_site_count', 'UNESCO_Country')
 
     infrastructure_raw = spark.read.csv(f"gs://{bucket}/infrastructure.csv", header=True, inferSchema=True)
     infrastructure_selected = infrastructure_raw.select('Country', 'Overall Infrastructure Score', 'Basic Infrastructure Score', \
         'Technological Infrastructure Score', 'Scientific Infrastructure Score', 'Health and Environment Score', 'Education Score')
 
-    # Make all the columns snake case
+    # Make all the columns in infrastructure snake case
     for col_name in infrastructure_selected.columns:
         infrastructure_selected = infrastructure_selected.withColumnRenamed(col_name, col_name.lower().replace(' ', '_'))
-
-    # infrastructure_selected.show(5)
-    # world_heritage_sites_selected.show(5)
 
     ## Aggregate the data    
     cultural = infrastructure_selected\
         .join(
             world_heritage_sites_selected,
-            world_heritage_sites_selected.Country == infrastructure_selected.country,
+            world_heritage_sites_selected.UNESCO_Country == infrastructure_selected.country,
             'outer')\
-        # .drop(world_heritage_sites_selected.Country)
+        .select(
+            when(
+                col("UNESCO_Country").isNotNull(), 
+                col("UNESCO_Country")).otherwise(col("country"))\
+                    .alias("name"),
+            "*"
+        )\
+        .drop(
+            infrastructure_selected.country, world_heritage_sites_selected.UNESCO_Country
+        )
 
     climate_year = annual_co2 \
             .join(annual_ghe, (annual_co2.Entity == annual_ghe.Entity) & (annual_co2.Year == annual_ghe.Year), 'left')\
@@ -160,18 +167,23 @@ def clean_data_tables():
                 (international_tourist_trips.Entity == intl_tourist_spending.Entity) & \
                     (international_tourist_trips.Year == intl_tourist_spending.Year), 
                 'left')\
-            .drop(international_tourist_trips.Entity, international_tourist_trips.Year, international_tourist_trips.Code)
+            .drop(international_tourist_trips.Entity, international_tourist_trips.Year, international_tourist_trips.Code)\
+            .withColumnRenamed('Entity', 'name')\
+            .withColumnRenamed('Code', 'country_code')\
+            .withColumnRenamed('Year', 'year')
 
     # Rename columns
     climate_names = {
         'Entity': 'name', 
         'Code': 'country_code', 
         'Year': 'year', 
-        'Annual COâ emissions': 'co2 emissions', 
-        'Annual greenhouse gas emissions in COâ equivalents': 'ghe_co_equivalent', 
-        'Deforestation as share of forest area': 'deforestation_by_forest_area', 
-        'wildfire': 'tree_loss_from_wildfires',
-        'temperature_2m.1': 'avg_yearly_surface_temp',
+        'Annual COâ emissions': 'co2_emissions(carbon_tonnes)', 
+        'Annual greenhouse gas emissions in COâ equivalents': 'gh_emissions(in_co2_tonnes)',
+        'primary_energy_consumption__twh': 'energy_consumption(twh)',
+        'total_precipitation': 'precipitation',
+        'Deforestation as share of forest area': 'deforestation_per_area', 
+        'wildfire': 'tree_loss_from_wildfires(ha)',
+        'temperature_2m.1': 'avg_surface_temp(C)',
     }
     
     for old_col, new_col in climate_names.items():
@@ -184,7 +196,7 @@ def clean_data_tables():
         'ny_gdp_pcap_pp_kd': 'gdp_ppp_per_capita', 
         'ny_gdp_pcap_kd': 'nominal_gdp_ppp_per_capita',
         'fp_cpi_totl_zg': 'inflation_rate_cpi_based', 
-        'value__category_total__sex_total__age_total__unit_of_measurement_rate_per_100_000_population': 'crime_rate', 
+        'value__category_total__sex_total__age_total__unit_of_measurement_rate_per_100_000_population': 'crime_rate_per_100000', 
         'death_count__age_group_allages__sex_both_sexes__cause_natural_disasters': 'natural_disaster_deaths',
     }
 
@@ -222,7 +234,7 @@ def clean_data_tables():
     disease_death_replaced.describe()
 
     print("\nInfrastructure and Heritage Sites Table:")
-    cultural.show(20)
+    cultural.show(5)
     cultural.describe()
 
     # Load all files
