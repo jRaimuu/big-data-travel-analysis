@@ -41,28 +41,28 @@ def clean_data_tables():
 
     disease_death = spark.read.csv(f"gs://{bucket}/disease_death.csv")
     disease_death_renamed = disease_death.withColumnRenamed('location_name', 'name')
-    disease_death_replaced = disease_death.replace('United States of America', 'United States', ['name'])
+    disease_death_replaced = disease_death_renamed.replace('United States of America', 'United States', 'name')
 
     # Aggregated disease_death
     disease_death_year = disease_death.groupBy(['name', 'year']).agg(sum('val').alias('disease_death_val'))
 
     # Aggregated surface temp data by average
-    yearly_monthly_surface_temp_full = average_monthly_surface_temp_full.filter(month(average_monthly_surface_temp_full.Day) == 1)
-    yearly_monthly_surface_temp = yearly_monthly_surface_temp_full.select('Entity', 'Code', 'Year', 'temperature_2m.1')
+    yearly_surface_temp_full = average_monthly_surface_temp_full.filter(month(average_monthly_surface_temp_full.Day) == 1)
+    yearly_surface_temp = yearly_surface_temp_full.select('Entity', 'Code', 'Year', 'temperature_2m.1')
 
-    internet_penetration = spark.read.csv(internet_penetration_rate.csv, header=True, inferSchema=True)
+    internet_penetration = spark.read.csv(f"gs://{bucket}/internet_penetration_rate.csv", header=True, inferSchema=True)
     internet_penetration = internet_penetration\
         .withColumnRenamed('it_net_user_zs', 'internet_user_score')\
         .withColumnRenamed('entity', 'name')\
         .withColumnRenamed('Year', 'year')
 
     # Monthly surface temp data
-    average_monthly_surface_temp_full = spark_csv.read.csv(f"gs://{bucket}/average_monthly_surface_temp.csv", header=True, inferSchema=True)
+    average_monthly_surface_temp_full = spark.read.csv(f"gs://{bucket}/average_monthly_surface_temp.csv", header=True, inferSchema=True)
     average_monthly_surface_temp = average_monthly_surface_temp_full.select('Entity', 'Code', 'year', 'temperature_2m')
     average_monthly_surface_temp_renamed = average_monthly_surface_temp.withColumnRenamed('Entity', 'name')
 
     # Data that is not yearly
-    world_heritage_sites = spark_csv.read.csv(f"gs://{bucket}/unesco_whs_by_country.csv", header=True, inferSchema=True)
+    world_heritage_sites = spark.read.csv(f"gs://{bucket}/unesco_whs_by_country.csv", header=True, inferSchema=True)
     world_heritage_sites_renamed = world_heritage_sites\
         .withColumnRenamed('Total sites', 'heritage_sites')\
         .withColumnRenamed('Country', 'name')
@@ -96,17 +96,17 @@ def clean_data_tables():
             .join(average_precipitation, (annual_co2.Entity == average_precipitation.Entity) & (annual_co2.Year == average_precipitation.Year), 'left')\
             .drop(average_precipitation.Entity, average_precipitation.Year, average_precipitation.Code) \
             .join(
-                yearly_monthly_surface_temp_replaced, 
-                (annual_co2.Entity == yearly_monthly_surface_temp_replaced.Entity) \
-                    & (annual_co2.Year == yearly_monthly_surface_temp_replaced.Year), 
+                yearly_surface_temp, 
+                (annual_co2.Entity == yearly_surface_temp.Entity) \
+                    & (annual_co2.Year == yearly_surface_temp.Year), 
                 'left')\
             .drop(
-                yearly_monthly_surface_temp_replaced.Entity, 
-                yearly_monthly_surface_temp_replaced.Year, 
-                yearly_monthly_surface_temp_replaced.Code)
+                yearly_surface_temp.Entity, 
+                yearly_surface_temp.Year, 
+                yearly_surface_temp.Code)
 
 
-    health_econ_year = crime_rate
+    health_econ_year = crime_rate\
             .join(
                 gdp_ppp_per_capita, 
                 (crime_rate.Entity == gdp_ppp_per_capita.Entity) & (crime_rate.Year == gdp_ppp_per_capita.Year), 
@@ -129,7 +129,7 @@ def clean_data_tables():
                 internet_penetration, 
                 (crime_rate.Entity == internet_penetration.Entity) & (crime_rate.Year == internet_penetration.Year), 
                 'left')\
-            .drop(internet_penetration.Entity, internet_penetration.Year, internet_penetration.Code)
+            .drop(internet_penetration.Entity, internet_penetration.Year, internet_penetration.Code)\
             .join(disease_death_year, (crime_rate.Entity == disease_death_year.name) & (crime_rate.Year == disease_death_year.name), 'left')\
             .drop(disease_death_year.Entity, disease_death_year.Year, disease_death_year.Code)
 
