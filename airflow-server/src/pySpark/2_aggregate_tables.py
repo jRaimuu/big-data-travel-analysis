@@ -1,10 +1,6 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StringType
 from pyspark.sql.functions import month, col, sum, when
-
-from dotenv import load_dotenv
-from os import getenv, path
-from dotenv import load_dotenv
+from gcsfs import GCSFileSystem
 
 '''
 To run this file locally, enter this in the command line:
@@ -14,14 +10,12 @@ spark-submit \
     clean_tables.py
 '''
 
-def clean_data_tables():
-    """Clean all string columns in bucket by iterating over all csv files"""
-    dotenv_path = path.abspath(path.join(path.dirname(__file__), '../..', '.env'))
-    load_dotenv(dotenv_path)
+def aggregate_data_tables():
+    """Aggregates data from multiple CSV files in a Google Cloud Storage bucket into structured tables for analysis"""
     bucket = "travel-analysis-bucket"
 
     spark = SparkSession.builder\
-                        .appName("Clean DSV Data")\
+                        .appName("Data Warehouse Aggreagetion")\
                         .config("spark.jars", "https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar")\
                         .config("spark.hadoop.fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem") \
                         .config("spark.hadoop.fs.gs.auth.service.account.enable", "false") \
@@ -237,23 +231,5 @@ def clean_data_tables():
     cultural.show(5)
     cultural.describe()
 
-    # Load all files
-    # files = GCSFileSystem().ls(f"gs://{bucket}/")
-    # csv_files_paths = [f"gs://{file}" for file in files if file.endswith(".csv")]
-
-    # if not csv_files_paths:
-    #     raise ValueError("No CSV files found in the bucket.")
-    
-    # print("Succesfully read files:")
-    # for i, name in enumerate(csv_files_paths):
-    #     print(f"{i}. {name}")
-
-    # # Passing a list to read.csv reads them in parallel
-    # df = spark_csv.read.csv(csv_files_paths, header=True, inferSchema=True)
-
-    # for column_name, column_type in df.dtypes:
-    #     if column_type == "string":
-    #         df = df.withColumn(column_name, trim(col(column_name)))
-
 if __name__ == '__main__':
-    clean_data_tables()
+    aggregate_data_tables()
