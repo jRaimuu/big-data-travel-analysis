@@ -4,8 +4,12 @@ from airflow.utils.dates import days_ago
 
 from datetime import datetime
 
-from ..pySpark.clean_tables import clean_data_tables
-from ..pySpark.aggregate_tables import aggregate_data_tables
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from pySpark.clean_tables import clean_data_tables
+from pySpark.aggregate_tables import aggregate_data_tables
 
 
 default_args = {
@@ -14,7 +18,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="data_pipeline",
+    dag_id="pre_process",
     default_args=default_args,
     start_date=datetime(2024, 12, 1),
     schedule_interval=None,
