@@ -66,7 +66,7 @@ default_args = {
 
 # DAG definition
 with DAG(
-    'dataproc_spark_job',
+    'dataproc_etl_pipeline',
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
