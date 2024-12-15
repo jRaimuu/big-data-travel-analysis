@@ -231,5 +231,17 @@ def aggregate_data_tables():
     cultural.show(5)
     cultural.describe()
 
+    OUTPUT_BUCKET_NAME = "travel-analysis-bucket"
+    OUTPUT_PATH  = f"gs://{OUTPUT_BUCKET_NAME}/aggregated"
+
+    # write the data to the GCS bucket
+    climate_year.write.csv(OUTPUT_PATH + "/climate_year", header=True, mode="overwrite")
+    health_econ_year.write.csv(OUTPUT_PATH + "/health_econ_year", header=True, mode="overwrite")
+    tourism_year.write.csv(OUTPUT_PATH + "/tourism_year", header=True, mode="overwrite")
+    average_monthly_surface_temp_renamed.write.csv(OUTPUT_PATH + "/average_monthly_surface_temp", header=True, mode="overwrite")
+    disease_death_replaced.write.csv(OUTPUT_PATH + "/disease_death", header=True, mode="overwrite")
+    cultural.write.csv(OUTPUT_PATH + "/cultural", header=True, mode="overwrite")
+
+
 if __name__ == '__main__':
     aggregate_data_tables()

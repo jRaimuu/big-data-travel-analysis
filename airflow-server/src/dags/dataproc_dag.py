@@ -37,11 +37,22 @@ CLUSTER_CONFIG = ClusterGenerator(
     ],
 ).make()
 
-PYSPARK_JOB = {
+PYSPARK_CLEAN = {
     "reference": {"project_id": PROJECT_ID},
     "placement": {"cluster_name": CLUSTER_NAME},
     "pyspark_job": {
-        "main_python_file_uri": f"gs://{BUCKET_NAME}/scripts/jobs/bucket_to_spark.py",
+        "main_python_file_uri": f"gs://{BUCKET_NAME}/scripts/jobs/clean_tables.py",
+        "python_file_uris": [
+            f"gs://{BUCKET_NAME}/scripts/dependencies/bucket_to_spark.env"
+        ], 
+    },
+}
+
+PYSPARK_AGG = {
+    "reference": {"project_id": PROJECT_ID},
+    "placement": {"cluster_name": CLUSTER_NAME},
+    "pyspark_job": {
+        "main_python_file_uri": f"gs://{BUCKET_NAME}/scripts/jobs/aggregate_tables.py",
         "python_file_uris": [
             f"gs://{BUCKET_NAME}/scripts/dependencies/bucket_to_spark.env"
         ], 
@@ -72,8 +83,15 @@ with DAG(
 
     # submit Spark job
     submit_spark_job = DataprocSubmitJobOperator(
-        task_id="submit_spark_job",
-        job=PYSPARK_JOB,
+        task_id="spark_job_clean",
+        job=PYSPARK_CLEAN,
+        region=REGION,
+        project_id=PROJECT_ID,
+    )
+
+    submit_spark_job = DataprocSubmitJobOperator(
+        task_id="spark_job_agg",
+        job=PYSPARK_AGG,
         region=REGION,
         project_id=PROJECT_ID,
     )
