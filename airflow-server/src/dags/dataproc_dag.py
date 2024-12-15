@@ -82,14 +82,14 @@ with DAG(
     )
 
     # submit Spark job
-    submit_spark_job = DataprocSubmitJobOperator(
+    spark_job_clean = DataprocSubmitJobOperator(
         task_id="spark_job_clean",
         job=PYSPARK_CLEAN,
         region=REGION,
         project_id=PROJECT_ID,
     )
 
-    submit_spark_job = DataprocSubmitJobOperator(
+    spark_job_agg = DataprocSubmitJobOperator(
         task_id="spark_job_agg",
         job=PYSPARK_AGG,
         region=REGION,
@@ -106,4 +106,4 @@ with DAG(
     )
 
     # task dependencies
-    create_cluster >> submit_spark_job >> delete_cluster
+    create_cluster >> spark_job_clean >> spark_job_agg >> delete_cluster
