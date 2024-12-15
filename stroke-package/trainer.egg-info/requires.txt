@@ -1,0 +1,7 @@
+pandas
+requests
+beautifulsoup4
+pygam
+tensorflow
+scikit-learn
+gdown==4.6.3

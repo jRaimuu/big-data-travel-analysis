@@ -3,6 +3,9 @@ import pandas as pd
 from io import StringIO
 from bs4 import BeautifulSoup
 import os
+import joblib
+from google.cloud import storage
+import logging
 
 # # Define headers with custom User-Agent
 # headers = {'User-Agent': 'Our World In Data data fetch/1.0'}
@@ -275,5 +278,20 @@ print("Mean Squared Error (MSE):", mse)
 print("R² Score:", r2)
 
 
+rf_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
+print(rf_df)
 
 
+# Save model artifact to Local filesystem (doesn't persist)
+artifact_filename = 'model.joblib'
+local_path = artifact_filename
+joblib.dump(rf, local_path)
+
+# Upload model artifact to Cloud Storage
+model_directory = "gs://travel-analysis-bucket/scripts/machine-learning"
+storage_path = os.path.join(model_directory, artifact_filename)
+
+blob = storage.blob.Blob.from_string(storage_path, client=storage.Client())
+blob.upload_from_filename(local_path)
+
+logging.info("model exported to : {}".format (storage_path))
