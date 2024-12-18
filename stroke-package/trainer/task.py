@@ -2,6 +2,9 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+import joblib
+from google.cloud import storage
+import logging
 
 import subprocess
 
@@ -76,7 +79,8 @@ merge_df = pd.merge(merge_df, health_econ_year, on=['name', 'country_code', 'yea
 merge_df = pd.merge(merge_df, tourism_year, on=['name', 'country_code', 'year'])
 
 merge_df = merge_df.dropna(subset=['in_tour_arrivals_ovn_vis_tourists', 'overall_infrastructure_score'])
-merge_df = merge_df.drop(columns=['natural_disaster_deaths'])
+merge_df = merge_df.drop(columns=['natural_disaster_deaths', 'tree_loss_from_wildfires_ha'])
+merge_df = merge_df.fillna(0)
 
 
 import pandas as pd
@@ -84,7 +88,7 @@ from fancyimpute import IterativeImputer
 
 # Use IterativeImputer (MICE) to fill in the missing values
 imputer = IterativeImputer()
-imputed_data = imputer.fit_transform(merge_df[['precipitation', 'avg_surface_temp(C)', 'heritage_site_count', 
+imputed_data = imputer.fit_transform(merge_df[['precipitation', 'avg_surface_temp_C', 'heritage_site_count', 
                                                'crime_rate_per_100000', 'inflation_rate_cpi_based', 'internet_user_score']])
 
 # Replace the missing data column with the imputed values
