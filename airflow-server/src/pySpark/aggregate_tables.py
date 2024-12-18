@@ -60,7 +60,7 @@ def aggregate_data_tables():
     average_monthly_surface_temp_renamed = average_monthly_surface_temp\
         .withColumnRenamed('Entity', 'name')\
         .withColumnRenamed('Code', 'country_code')\
-        .withColumnRenamed('temperature_2m', 'surface_temp')
+        .withColumnRenamed('temperature_2m', 'surface_temp_c')
 
     # Aggregated surface temp data by average
     yearly_surface_temp_full = average_monthly_surface_temp_full.filter(month(average_monthly_surface_temp_full.Day) == 1)
@@ -172,13 +172,13 @@ def aggregate_data_tables():
         'Entity': 'name', 
         'Code': 'country_code', 
         'Year': 'year', 
-        'Annual COâ emissions': 'co2_emissions(carbon_tonnes)', 
-        'Annual greenhouse gas emissions in COâ equivalents': 'gh_emissions(in_co2_tonnes)',
-        'primary_energy_consumption__twh': 'energy_consumption(twh)',
+        'Annual COâ emissions': 'co2_emissions_carbon_tonnes', 
+        'Annual greenhouse gas emissions in COâ equivalents': 'gh_emissions_co2_tonnes',
+        'primary_energy_consumption__twh': 'energy_consumption_twh',
         'total_precipitation': 'precipitation',
         'Deforestation as share of forest area': 'deforestation_per_area', 
-        'wildfire': 'tree_loss_from_wildfires(ha)',
-        'temperature_2m.1': 'avg_surface_temp(C)',
+        'wildfire': 'tree_loss_from_wildfires_ha',
+        'temperature_2m.1': 'avg_surface_temp_C',
     }
     
     for old_col, new_col in climate_names.items():
