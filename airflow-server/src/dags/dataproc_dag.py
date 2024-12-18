@@ -59,6 +59,28 @@ PYSPARK_AGG = {
     },
 }
 
+PYSPARK_MERGE = {
+    "reference": {"project_id": PROJECT_ID},
+    "placement": {"cluster_name": CLUSTER_NAME},
+    "pyspark_job": {
+        "main_python_file_uri": f"gs://{BUCKET_NAME}/scripts/jobs/merge_tables.py",
+        "python_file_uris": [
+            f"gs://{BUCKET_NAME}/scripts/dependencies/bucket_to_spark.env"
+        ], 
+    },
+}
+
+PYSPARK_WRITE_BIGQUERY = {
+    "reference": {"project_id": PROJECT_ID},
+    "placement": {"cluster_name": CLUSTER_NAME},
+    "pyspark_job": {
+        "main_python_file_uri": f"gs://{BUCKET_NAME}/scripts/jobs/to_bigquery.py",
+        "python_file_uris": [
+            f"gs://{BUCKET_NAME}/scripts/dependencies/bucket_to_spark.env"
+        ], 
+    },
+}
+
 default_args = {
     'start_date': days_ago(1),
     'retries': 1,
@@ -92,6 +114,20 @@ with DAG(
     spark_job_agg = DataprocSubmitJobOperator(
         task_id="spark_job_agg",
         job=PYSPARK_AGG,
+        region=REGION,
+        project_id=PROJECT_ID,
+    )
+
+    spark_job_merge = DataprocSubmitJobOperator(
+        task_id="spark_job_merge",
+        job=PYSPARK_MERGE,
+        region=REGION,
+        project_id=PROJECT_ID,
+    )
+
+    spark_job_write_bigquery = DataprocSubmitJobOperator(
+        task_id="spark_job_write_bigquery",
+        job=PYSPARK_WRITE_BIGQUERY,
         region=REGION,
         project_id=PROJECT_ID,
     )
