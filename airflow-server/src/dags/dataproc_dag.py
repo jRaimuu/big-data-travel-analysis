@@ -142,4 +142,4 @@ with DAG(
     )
 
     # task dependencies
-    create_cluster >> spark_job_clean >> spark_job_agg >> delete_cluster
+    create_cluster >> spark_job_clean >> spark_job_agg >> spark_job_merge >> spark_job_write_bigquery >> delete_cluster
