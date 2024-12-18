@@ -1,243 +1,117 @@
-import requests
 import pandas as pd
-from io import StringIO
-from bs4 import BeautifulSoup
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+
+import subprocess
+
+command = [
+    "gsutil", "-m", "cp", "-r",
+    "gs://travel-analysis-bucket/aggregated/average_monthly_surface_temp",
+    "gs://travel-analysis-bucket/aggregated/climate_year",
+    "gs://travel-analysis-bucket/aggregated/cultural",
+    "gs://travel-analysis-bucket/aggregated/disease_death",
+    "gs://travel-analysis-bucket/aggregated/health_econ_year",
+    "gs://travel-analysis-bucket/aggregated/tourism_year",
+    "."
+]
+
+subprocess.run(command)
+
+
+# climate = pd.read_csv("/climate_year/part-00000-c32df0cd-3b2a-4121-940b-72b286b724dc-c000.csv")
+# climate = climate.drop(columns=['deforestation_per_area'])
+
+# cultural = pd.read_csv("/cultural/part-00000-45560606-287c-4c18-afc9-432b6a39563c-c000.csv")
+
+# disease_death = pd.read_csv("/disease_death/part-00000-967e0ddc-6abc-43a1-a688-3021496db094-c000.csv")
+
+# health_econ_year = pd.read_csv("/health_econ_year/part-00000-9eee8e25-14e3-4ccc-828a-bdb09f57136a-c000.csv")
+
+# tourism_year = pd.read_csv("/tourism_year/part-00000-79b7fe51-3adb-4f25-b750-0992a331f5f7-c000.csv")
+
+import pandas as pd
 import os
-import joblib
-from google.cloud import storage
-import logging
 
-# # Define headers with custom User-Agent
-# headers = {'User-Agent': 'Our World In Data data fetch/1.0'}
+def get_first_csv_file_path(folder_path):
+    # List all files in the directory
+    files = os.listdir(folder_path)
+    # Filter for CSV files
+    csv_files = [file for file in files if file.endswith('.csv')]
+    # Return the first CSV file path, if any
+    if csv_files:
+        return os.path.join(folder_path, csv_files[0])
+    return None
 
-# # Fetch CO2 data
-# url_co2 = "https://ourworldindata.org/grapher/annual-co2-emissions-per-country.csv?v=1&csvType=full&useColumnShortNames=false"
-# response_co2 = requests.get(url_co2, headers=headers)
-
-# # Check for a successful response
-# if response_co2.status_code == 200:
-#     # Convert response content into a pandas DataFrame
-#     annual_co2 = pd.read_csv(StringIO(response_co2.text))
-#     # print(annual_co2.head())
-# else:
-#     print(f"Failed to fetch CO2 data. Status code: {response_co2.status_code}")
-
-# # Fetch GHG data
-# url_ghe = "https://ourworldindata.org/grapher/total-ghg-emissions.csv?v=1&csvType=full&useColumnShortNames=false"
-# response_ghe = requests.get(url_ghe, headers=headers)
-
-# # Check for a successful response
-# if response_ghe.status_code == 200:
-#     # Convert response content into a pandas DataFrame
-#     annual_ghe = pd.read_csv(StringIO(response_ghe.text))
-#     # print(annual_ghe.head())
-# else:
-#     print(f"Failed to fetch GHG data. Status code: {response_ghe.status_code}")
-
-# List of datasets to fetch
-datasets = {
-    "annual_co2": "https://ourworldindata.org/grapher/annual-co2-emissions-per-country.csv?v=1&csvType=full&useColumnShortNames=false",
-    "annual_ghe": "https://ourworldindata.org/grapher/total-ghg-emissions.csv?v=1&csvType=full&useColumnShortNames=false",
-    "annual_deforest": "https://ourworldindata.org/grapher/deforestation-share-forest-area.csv?v=1&csvType=full&useColumnShortNames=true",
-    "tree_cover_loss_wildfires": "https://ourworldindata.org/grapher/tree-cover-loss-from-wildfires.csv?v=1&csvType=full&useColumnShortNames=true",
-    "energy_consumption": "https://ourworldindata.org/grapher/primary-energy-cons.csv?v=1&csvType=full&useColumnShortNames=true",
-    "climate_support": "https://ourworldindata.org/grapher/support-policies-climate.csv?v=1&csvType=full&useColumnShortNames=true",
-    "average_precipitation": "https://ourworldindata.org/grapher/average-precipitation-per-year.csv?v=1&csvType=full&useColumnShortNames=true",
-    "gdp_ppp_per_capita": "https://ourworldindata.org/grapher/gdp-per-capita-worldbank.csv?v=1&csvType=full&useColumnShortNames=true",
-    "gdp_nominal_per_capita": "https://ourworldindata.org/grapher/gdp-per-capita-world-bank-constant-usd.csv?v=1&csvType=full&useColumnShortNames=true",
-    "inflation_rate": "https://ourworldindata.org/grapher/inflation-of-consumer-prices.csv?v=1&csvType=full&useColumnShortNames=true",
-    "crime_rate": "https://ourworldindata.org/grapher/homicide-rate-unodc.csv?v=1&csvType=full&useColumnShortNames=true",
-    "internet_penetration_rate": "https://ourworldindata.org/grapher/share-of-individuals-using-the-internet.csv?v=1&csvType=full&useColumnShortNames=true",
-    "intl_tourist_spending": "https://ourworldindata.org/grapher/average-expenditures-of-tourists-abroad.csv?v=1&csvType=full&useColumnShortNames=true",
-    "natural_disaster_death": "https://ourworldindata.org/grapher/deaths-from-natural-disasters.csv?v=1&csvType=full&useColumnShortNames=true",
-    "population_density": "https://ourworldindata.org/grapher/population-density.csv?v=1&csvType=full&useColumnShortNames=true",
-    "international_tourist_trips": "https://ourworldindata.org/grapher/international-tourist-trips.csv?v=1&csvType=full&useColumnShortNames=true",
-    "average_monthly_surface_temp": "https://ourworldindata.org/grapher/average-monthly-surface-temperature.csv?v=1&csvType=full&useColumnShortNames=true"
+# Define the paths to the folders
+folders = {
+    'climate_year': 'climate_year',
+    'cultural': 'cultural',
+    'disease_death': 'disease_death',
+    'health_econ_year': 'health_econ_year',
+    'tourism_year': 'tourism_year'
 }
 
-# User-Agent headers
-headers = {'User-Agent': 'Our World In Data data fetch/1.0'}
+# Load the CSV files
+climate_path = get_first_csv_file_path(folders['climate_year'])
+climate = pd.read_csv(climate_path)
+climate = climate.drop(columns=['deforestation_per_area'])
 
-# Dictionary to store the DataFrames
-dataframes = {}
+cultural_path = get_first_csv_file_path(folders['cultural'])
+cultural = pd.read_csv(cultural_path)
 
-# Loop through datasets to fetch and process
-for name, url in datasets.items():
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            dataframes[name] = pd.read_csv(StringIO(response.text))
-            print(f"{name} loaded successfully")
-        else:
-            print(f"Failed to fetch {name}")
-    except Exception as e:
-        print(f"Failed to fetch {name}. Error: {e}")
+disease_death_path = get_first_csv_file_path(folders['disease_death'])
+disease_death = pd.read_csv(disease_death_path)
 
+health_econ_year_path = get_first_csv_file_path(folders['health_econ_year'])
+health_econ_year = pd.read_csv(health_econ_year_path)
 
-# Function to fetch tables from Wikipedia
-def fetch_wiki_table(url):
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            table = soup.find('table')  # Get the first table on the page
-            if table:
-                return pd.read_html(str(table))[0]  # Convert the HTML table to a DataFrame
-            else:
-                print(f"No table found at {url}")
-                return None
-        else:
-            print(f"Failed to fetch Wikipedia page. Status code: {response.status_code}")
-            return None
-    except Exception as e:
-        print(f"Error fetching Wikipedia table from {url}: {e}")
-        return None
-
-# Error
-# # Function to fetch files from Google Drive public links
-# def fetch_google_drive_file(file_id, destination):
-#     try:
-#         # Use gdown to download the file
-#         os.system(f"gdown --id {file_id}")
-#         if os.path.exists(destination):
-#             return pd.read_csv(destination) 
-#         else:
-#             print(f"Failed to download file with ID {file_id}")
-#             return None
-#     except Exception as e:
-#         print(f"Error downloading Google Drive file with ID {file_id}: {e}")
-#         return None
-
-# Fixed
-def fetch_google_drive_file(file_id, destination):
-    try:
-        # Print the actual command for debugging
-        command = f"gdown --id {file_id} -O {destination}"
-        print(f"Executing command: {command}")
-        os.system(command)
-
-        if os.path.exists(destination):
-            return pd.read_csv(destination) 
-        else:
-            print(f"Failed to download file with ID {file_id}")
-            return None
-    except Exception as e:
-        print(f"Error downloading Google Drive file with ID {file_id}: {e}")
-        return None
-
-# Example Usage: Multiple Wiki URLs and Google Drive files
-wiki_urls = {
-    "number_of_UNESCO_WHS": "https://en.wikipedia.org/wiki/World_Heritage_Sites_by_country",
-    "population": "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population",
-    "political_stability": "https://en.wikipedia.org/wiki/List_of_countries_by_Fragile_States_Index",
-    "infrastructure": "https://worldpopulationreview.com/country-rankings/infrastructure-by-country"
-}
-
-google_drive_files = {
-    "disease_death": "1FKaZWXoVQ8pIIPFSrRWR8vofTvU20LP6",
-}
-
-# Load data from Wikipedia
-for key, url in wiki_urls.items():
-    print(f"Fetching table from Wikipedia page for {key}: {url}")
-    df = fetch_wiki_table(url)
-    if df is not None:
-        dataframes[key] = df  # Use the dictionary key as the dataframe name
-        print(f"Loaded table for {key} from Wikipedia page")
-
-# Load data from Google Drive
-for name, file_id in google_drive_files.items():
-    print(f"Fetching file from Google Drive: {name}")
-    destination = f"{name}.csv"  # Destination path
-    df = fetch_google_drive_file(file_id, destination)
-    if df is not None:
-        dataframes[name] = df
-        print(f"Loaded dataset: {name}")
-
-# Verify loaded datasets
-for name, df in dataframes.items():
-    print(f"\n{name} DataFrame preview:")
-    print(df.head())
-
-# Convert 2015 dollars to 2017 dollars
-dataframes['gdp_nominal_per_capita']['ny_gdp_pcap_kd'] = dataframes['gdp_nominal_per_capita']['ny_gdp_pcap_kd'] * 64623.125 / 62789.130
-
-# inflation_rate = inflation_rate.rename(columns={'fp_cpi_totl_zg': 'inflation_rate'})
-# crime_rate = crime_rate.rename(columns={'value__category_total__sex_total__age_total__unit_of_measurement_rate_per_100_000_population': 'crime_rate'})
-# internet_penetration_rate = internet_penetration_rate.rename(columns={'it_net_user_zs': 'internet_penetration_rate'})
-# intl_tourist_spending = intl_tourist_spending.rename(columns={'outbound_exp_us_cpi_adjust': 'intl_tourist_spending'})
-# natural_disaster_death = natural_disaster_death.rename(columns={'death_count__age_group_allages__sex_both_sexes__cause_natural_disasters': 'natural_disaster_death'})
-# number_of_UNESCO_WHS = number_of_UNESCO_WHS[['Country', 'Total sites']]
-# number_of_UNESCO_WHS.rename(columns={'Total sites': 'number_of_UNESCO_WHS', 'Country': 'Entity'}, inplace=True)
-# population = population[['Location', 'Population']]
-# population.rename(columns={'Location': 'Entity'}, inplace=True)
-# political_stability = political_stability[['Country', '2024 score']]
-# political_stability.rename(columns={'2024 score': 'political_stability', 'Country': 'Entity'}, inplace=True)
-# infrastructure = infrastructure[['Country', 'Overall Infrastructure Score', 'Basic Infrastructure Score', 'Technological Infrastructure Score', 'Scientific Infrastructure Score', 'Health and Environment Score', 'Education Score']]
-# infrastructure.rename(columns={'Country': 'Entity'}, inplace=True)
-# disease_death = disease_death[['location_name', 'year', 'val']]
-# disease_death.rename(columns={'location_name': 'Entity', 'year': 'Year', 'val': 'disease_death'}, inplace=True)
-# disease_death['Entity'] = disease_death['Entity'].replace('United States of America', 'United States')
-# average_monthly_surface_temp.rename(columns={'year': 'Year'}, inplace=True)
-# average_yearly_temp = average_monthly_surface_temp.groupby(['Entity', 'Code', 'Year'])['temperature_2m'].mean().reset_index()
-
-# Renaming
-dataframes['inflation_rate'] = dataframes['inflation_rate'].rename(columns={'fp_cpi_totl_zg': 'inflation_rate'})
-dataframes['crime_rate'] = dataframes['crime_rate'].rename(columns={'value__category_total__sex_total__age_total__unit_of_measurement_rate_per_100_000_population': 'crime_rate'})
-dataframes['internet_penetration_rate'] = dataframes['internet_penetration_rate'].rename(columns={'it_net_user_zs': 'internet_penetration_rate'})
-dataframes['intl_tourist_spending'] = dataframes['intl_tourist_spending'].rename(columns={'outbound_exp_us_cpi_adjust': 'intl_tourist_spending'})
-dataframes['natural_disaster_death'] = dataframes['natural_disaster_death'].rename(columns={'death_count__age_group_allages__sex_both_sexes__cause_natural_disasters': 'natural_disaster_death'})
-dataframes['number_of_UNESCO_WHS'] = dataframes['number_of_UNESCO_WHS'][['Country', 'Total sites']]
-dataframes['number_of_UNESCO_WHS'].rename(columns={'Total sites': 'number_of_UNESCO_WHS', 'Country': 'Entity'}, inplace=True)
-dataframes['population'] = dataframes['population'][['Location', 'Population']]
-dataframes['population'].rename(columns={'Location': 'Entity'}, inplace=True)
-dataframes['political_stability'] = dataframes['political_stability'][['Country', '2024 score']]
-dataframes['political_stability'].rename(columns={'2024 score': 'political_stability', 'Country': 'Entity'}, inplace=True)
-dataframes['infrastructure'] = dataframes['infrastructure'][['Country', 'Overall Infrastructure Score', 'Basic Infrastructure Score', 'Technological Infrastructure Score', 'Scientific Infrastructure Score', 'Health and Environment Score', 'Education Score']]
-dataframes['infrastructure'].rename(columns={'Country': 'Entity'}, inplace=True)
-dataframes['disease_death'] = dataframes['disease_death'][['location_name', 'year', 'val']]
-dataframes['disease_death'].rename(columns={'location_name': 'Entity', 'year': 'Year', 'val': 'disease_death'}, inplace=True)
-# dataframes['disease_death']['Entity'] = dataframes['disease_death']['Entity'].replace('United States of America', 'United States')
-dataframes['disease_death'].loc[:, 'Entity'] = dataframes['disease_death']['Entity'].replace('United States of America', 'United States')
-dataframes['average_monthly_surface_temp'].rename(columns={'year': 'Year'}, inplace=True)
-
-# Grouping average yearly temperature
-dataframes['average_yearly_temp'] = dataframes['average_monthly_surface_temp'].groupby(['Entity', 'Code', 'Year'])['temperature_2m'].mean().reset_index()
+tourism_year_path = get_first_csv_file_path(folders['tourism_year'])
+tourism_year = pd.read_csv(tourism_year_path)
 
 
-# Normal merge (from same source)
-merge_df = pd.merge(dataframes['international_tourist_trips'], dataframes['average_yearly_temp'], on=["Entity", "Code", "Year"], how="inner")
-merge_df = pd.merge(merge_df, dataframes['annual_co2'], on=["Entity", "Code", "Year"], how="inner")
-merge_df = pd.merge(merge_df, dataframes['annual_ghe'], on=["Entity", "Code", "Year"], how="inner")
-# merge_df = pd.merge(merge_df, dataframes['annual_deforest'], on=["Entity", "Code", "Year"], how="inner")
-# merge_df = pd.merge(merge_df, dataframes['tree_cover_loss_wildfires'], on=["Entity", "Code", "Year"], how="inner")
-merge_df = pd.merge(merge_df, dataframes['energy_consumption'], on=["Entity", "Code", "Year"], how="inner")
-# merge_df = pd.merge(merge_df, dataframes['climate_support'], on=["Entity", "Code", "Year"], how="inner")  # Only 1 year, can't merge
-merge_df = pd.merge(merge_df, dataframes['average_precipitation'], on=["Entity", "Code", "Year"], how="inner")
-merge_df = pd.merge(merge_df, dataframes['gdp_ppp_per_capita'], on=["Entity", "Code", "Year"], how="inner")
-merge_df = pd.merge(merge_df, dataframes['gdp_nominal_per_capita'], on=["Entity", "Code", "Year"], how="inner")
-merge_df = pd.merge(merge_df, dataframes['inflation_rate'], on=["Entity", "Code", "Year"], how="inner")
-merge_df = pd.merge(merge_df, dataframes['crime_rate'], on=["Entity", "Code", "Year"], how="inner")
-# merge_df = pd.merge(merge_df, dataframes['internet_penetration_rate'], on=["Entity", "Code", "Year"], how="inner")
-merge_df = pd.merge(merge_df, dataframes['intl_tourist_spending'], on=["Entity", "Code", "Year"], how="inner")
-# merge_df = pd.merge(merge_df, dataframes['natural_disaster_death'], on=["Entity", "Code", "Year"], how="inner")  # negligible impact
-# merge_df = pd.merge(merge_df, dataframes['population_density'], on=["Entity", "Code", "Year"], how="inner")  # negligible impact
+merge_df = pd.merge(climate, cultural, on=['name'])
+merge_df = pd.merge(merge_df, disease_death, on=['name', 'year'])
+merge_df = pd.merge(merge_df, health_econ_year, on=['name', 'country_code', 'year'])
+merge_df = pd.merge(merge_df, tourism_year, on=['name', 'country_code', 'year'])
 
-# Merge from Wiki
-merge_df = pd.merge(merge_df, dataframes['number_of_UNESCO_WHS'], on=["Entity"], how="left")
-merge_df = pd.merge(merge_df, dataframes['population'], on=["Entity"], how="inner")
-merge_df = pd.merge(merge_df, dataframes['political_stability'], on=["Entity"], how="inner")
-merge_df = pd.merge(merge_df, dataframes['infrastructure'], on=["Entity"], how="inner")
-
-# Merge from Google Drive upload
-merge_df = pd.merge(merge_df, dataframes['disease_death'], on=["Entity", "Year"], how="inner")
-
-# Additional processing
-merge_df['purchasing_power_index'] = merge_df['ny_gdp_pcap_pp_kd'] / merge_df['ny_gdp_pcap_kd']
+merge_df = merge_df.dropna(subset=['in_tour_arrivals_ovn_vis_tourists', 'overall_infrastructure_score'])
+merge_df = merge_df.drop(columns=['natural_disaster_deaths'])
 
 
-# Model
-merge_df.fillna(0, inplace=True)
+import pandas as pd
+from fancyimpute import IterativeImputer
+
+# Use IterativeImputer (MICE) to fill in the missing values
+imputer = IterativeImputer()
+imputed_data = imputer.fit_transform(merge_df[['precipitation', 'avg_surface_temp(C)', 'heritage_site_count', 
+                                               'crime_rate_per_100000', 'inflation_rate_cpi_based', 'internet_user_score']])
+
+# Replace the missing data column with the imputed values
+merge_df[['precipitation', 'avg_surface_temp(C)', 'heritage_site_count', 
+          'crime_rate_per_100000', 'inflation_rate_cpi_based', 'internet_user_score']] = imputed_data
+
+
+# Loop through the columns and convert object columns to numerical codes 
+for column in merge_df.select_dtypes(include=['object']).columns: 
+  merge_df[column] = merge_df[column].astype('category').cat.codes 
+
+
+# Define the columns of interest
+columns_of_interest = merge_df.columns.drop(['name'])
+
+# Subset the DataFrame to include only the numeric columns of interest
+numeric_df = merge_df[columns_of_interest]
+
+# Calculate the correlations
+target_column = 'in_tour_arrivals_ovn_vis_tourists'
+correlations = numeric_df.corr()[target_column]
+
+# Print correlations
+print(correlations.sort_values(ascending=False))
+
+
+
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
@@ -246,13 +120,6 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # Load your dataset
 data = merge_df
-
-# Drop "Code" column
-data = data.drop(columns=['Code'])
-
-# Convert "Entity" to numerical codes
-entity_dict = {entity: idx for idx, entity in enumerate(data['Entity'].unique())}
-data['Entity'] = data['Entity'].map(entity_dict)
 
 # Define features (X) and target (y)
 X = data.drop(columns=['in_tour_arrivals_ovn_vis_tourists'])  # Features
@@ -277,9 +144,12 @@ print("Mean Absolute Error (MAE):", mae)
 print("Mean Squared Error (MSE):", mse)
 print("R² Score:", r2)
 
+from sklearn.metrics import mean_absolute_percentage_error
 
-rf_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
-print(rf_df)
+# Evaluate the model using MAPE
+mape = mean_absolute_percentage_error(y_test, y_pred)
+
+print("Mean Absolute Percentage Error (MAPE):", mape)
 
 
 # Save model artifact to Local filesystem (doesn't persist)
