@@ -30,26 +30,32 @@ def bucket_sparkdf():
 
     # load data from the public GCS bucket
     climate_year=spark.read.csv(INPUT_PATH + "/climate_year", header=True, inferSchema=True)
-    health_econ_year=spark.read.csv(INPUT_PATH + "/health_econ_year", header=True, mode="overwrite")
-    tourism_year=spark.read.csv(INPUT_PATH + "/tourism_year", header=True, mode="overwrite")
-    cultural=spark.read.csv(INPUT_PATH + "/cultural", header=True, mode="overwrite")
-    spark_df = spark.read.csv(f"gs://{BUCKET_NAME}/{FILE_NAME}", header=True, inferSchema=True)
+    health_econ_year=spark.read.csv(INPUT_PATH + "/health_econ_year", header=True, inferSchema=True)
+    tourism_year=spark.read.csv(INPUT_PATH + "/tourism_year", header=True, inferSchema=True)    #join cont + year^
+    cultural=spark.read.csv(INPUT_PATH + "/cultural", header=True, inferSchema=True)        #Join my country
     # spark_df.printSchema()
-    spark_df.show()
+    
+    #Use inner joins
+    ml_features = climate_year\
+            .join(
+                health_econ_year,
+                (climate_year.name == health_econ_year.name) & (climate_year.year == health_econ_year.year), 
+                'inner')\
+            .drop(health_econ_year.name, health_econ_year.year) \
+            .join(
+                tourism_year,
+                (climate_year.name == tourism_year.name) & (climate_year.year == tourism_year.year), 
+                'inner')\
+            .drop(health_econ_year.name, health_econ_year.year) \
+            .join(
+                cultural,
+                (climate_year.name == cultural.name), 
+                'inner')\
+            .drop(cultural.name, cultural.year) \
 
-    # rename column
-    spark_df = spark_df.withColumnRenamed("Annual COâ\x82\x82 emissions", "Annual_CO2_emissions")
-
-    df_average_co2 = (
-        spark_df
-        .groupBy("Entity")
-        .agg(F.max("Annual_CO2_emissions").alias("max_CO2_emissions"))
-        .sort("max_CO2_emissions")
-    )
-    print(df_average_co2.show())
-
-    # writing to GCS
-    df_average_co2.write.csv(INPUT_PATH, header=True, mode="overwrite")
+    print(ml_features.show())
+    
+    ml_features.write.csv(INPUT_PATH + "/ml_features", header=True, mode="overwrite")
 
 
 bucket_sparkdf()
