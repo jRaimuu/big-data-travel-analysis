@@ -20,7 +20,7 @@ def read_and_clean_csv(spark, file_path, output_path):
         if column_type == "string":
             df = df.withColumn(column_name, trim(col(column_name)))
 
-    output_file_path = f"{output_path}/{file_path.split('/')[-1]}"
+    output_file_path = f"{output_path}/{file_path.split('/')[-1].replace('.csv', '')}"
     
     df.write.csv(output_file_path, header=True, mode='overwrite')
     print(f'Cleaned all string type data for {file_path}, and exported to {output_file_path}')
