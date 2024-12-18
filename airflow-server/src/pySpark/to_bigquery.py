@@ -14,21 +14,22 @@ def create_or_replace_table():
                         .getOrCreate()
     
     BUCKET_NAME = "travel-analysis-bucket"
-    # INPUT_PATH  = f"gs://{BUCKET_NAME}/aggregated/"
+    INPUT_PATH = f"gs://{BUCKET_NAME}/aggregated/"
     REQUIRED_COLUMNS = set(["name", "year"])
 
-    files = GCSFileSystem().ls("gs://travel-analysis-bucket/aggregated/")
+    files = GCSFileSystem().ls(INPUT_PATH)
+
+    # Create a list of the files that are not the main directory, add the gs prefix
     files_paths = [f"gs://{file}" for file in files if not file.endswith('/')]
 
+    # Insert the private project and dataset ids
     project_id = ''
     dataset_id = ''
     
     for file in files_paths:
-        print(file)
-        table_id = file.replace('gs://travel-analysis-bucket/aggregated/', '')
-        print(table_id)
         df = spark.read.csv(file, header=True, inferSchema=True)
         
+        # Create custom schema to make fields nullable
         schema = df.schema
         updated_fields = []
         for field in schema.fields:
@@ -37,7 +38,10 @@ def create_or_replace_table():
             else:
                 updated_fields.append(StructField(field.name, field.dataType, nullable=True))
         
-        df = spark.read.csv(file, header=True, schema=StructType(updated_fields))
+        updated_schema = StructType(updated_fields)
+        df = spark.read.csv(file, header=True, schema=updated_schema)
+        
+        table_id = file.replace(INPUT_PATH, '')
 
         df.write\
             .format("bigquery") \
@@ -46,6 +50,7 @@ def create_or_replace_table():
             .mode("overwrite") \
             .save()
 
+        # Print for loging purposes
         print(f"Table {table_id} created in BigQuery")
 
     spark.stop()
