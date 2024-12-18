@@ -3,11 +3,14 @@ from airflow.providers.google.cloud.operators.dataproc import (
     DataprocCreateClusterOperator,
     DataprocDeleteClusterOperator,
     DataprocSubmitJobOperator,
-    ClusterGenerator
+    ClusterGenerator,
 )
+from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 from dotenv import load_dotenv
 import os
+import subprocess
+
 load_dotenv()
 
 # constants
@@ -81,6 +84,12 @@ PYSPARK_WRITE_BIGQUERY = {
     },
 }
 
+def execute_pull_data():
+    script_path = "/tmp/pull_data.py"
+    bucket_path = f"gs://{BUCKET_NAME}/scripts/jobs/pull_data.py"
+    subprocess.run(["gsutil", "cp", bucket_path, script_path], check=True)
+    exec(open(script_path).read())
+
 default_args = {
     'start_date': days_ago(1),
     'retries': 1,
@@ -93,6 +102,12 @@ with DAG(
     schedule_interval=None,
     catchup=False,
 ) as dag:
+
+    # pull data from sources
+    pull_data = PythonOperator(
+        task_id="pull_data",
+        python_callable=execute_pull_data
+    )
 
     # create Dataproc cluster
     create_cluster = DataprocCreateClusterOperator(
@@ -142,4 +157,10 @@ with DAG(
     )
 
     # task dependencies
-    create_cluster >> spark_job_clean >> spark_job_agg >> spark_job_merge >> spark_job_write_bigquery >> delete_cluster
+    pull_data >>\
+    create_cluster >>\
+    spark_job_clean >>\
+    spark_job_agg >>\
+    spark_job_merge >>\
+    spark_job_write_bigquery >>\
+    delete_cluster
