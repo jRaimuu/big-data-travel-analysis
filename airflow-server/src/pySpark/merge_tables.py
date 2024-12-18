@@ -1,7 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 import os
-from dotenv import load_dotenv
 
 
 '''
@@ -11,7 +10,6 @@ spark-submit \
     --conf spark.hadoop.fs.gs.impl=com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem \
     bucket_to_spark.py
 '''
-load_dotenv()
 
 def bucket_sparkdf():
     """
