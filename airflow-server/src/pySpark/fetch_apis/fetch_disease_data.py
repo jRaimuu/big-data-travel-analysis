@@ -5,7 +5,7 @@ import io
 
 def fetch_disease_death():
     """ Importing the disease_death dataset from Google Drive and writing it to GCS """
-    BUCKET_NAME = "travel-analysis-bucket"
+    BUCKET_NAME = "travel-analysis-bucket/source_data"
     FILE_PATH = f"disease_death.csv"
     drive_file_id = "1FKaZWXoVQ8pIIPFSrRWR8vofTvU20LP6"
     download_url = f"https://drive.google.com/uc?export=download&id={drive_file_id}"

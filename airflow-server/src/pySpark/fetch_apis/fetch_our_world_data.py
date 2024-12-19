@@ -3,7 +3,7 @@ import gcsfs
 
 
 def fetch_our_world_data():
-    BUCKET_NAME = "travel-analysis-bucket"
+    BUCKET_NAME = "travel-analysis-bucket/source_data"
     print("===> Fetching Our World In Data datasets")
 
     datasets = {

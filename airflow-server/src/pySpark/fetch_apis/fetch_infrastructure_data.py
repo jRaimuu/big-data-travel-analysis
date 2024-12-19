@@ -4,7 +4,7 @@ import pandas as pd
 
 
 def fetch_infrastucture_data():
-    BUCKET_NAME = "travel-analysis-bucket"
+    BUCKET_NAME = "travel-analysis-bucket/source_data"
     FILE_PATH = f"infrastructure.csv"
 
     print("===> Making request to fetch UNESCO WHS data")

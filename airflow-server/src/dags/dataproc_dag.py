@@ -9,7 +9,6 @@ from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 from dotenv import load_dotenv
 import os
-import subprocess
 
 load_dotenv()
 
