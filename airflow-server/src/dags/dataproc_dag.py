@@ -8,7 +8,14 @@ from airflow.providers.google.cloud.operators.dataproc import (
 from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 from dotenv import load_dotenv
+import sys
 import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pySpark.fetch_apis.fetch_disease_data import fetch_disease_death
+from pySpark.fetch_apis.fetch_infrastructure_data import fetch_infrastucture_data
+from pySpark.fetch_apis.fetch_our_world_data import fetch_our_world_data
+
+
 
 load_dotenv()
 
@@ -129,6 +136,19 @@ with DAG(
     catchup=False,
 ) as dag:
 
+    fetch_our_world_job = PythonOperator(
+        task_id='fetch_our_world_job',
+        python_callable=fetch_our_world_data,
+    )
+    fetch_disease_job = PythonOperator(
+        task_id='fetch_disease_job',
+        python_callable=fetch_disease_death,
+    )
+    fetch_infrastructure_job = PythonOperator(
+        task_id='fetch_infrastructure_job',
+        python_callable=fetch_infrastucture_data,
+    )
+
     # create Dataproc cluster
     create_cluster = DataprocCreateClusterOperator(
         task_id="create_cluster",
@@ -138,27 +158,6 @@ with DAG(
         cluster_config=CLUSTER_CONFIG,
     )
 
-    # fetch data from APIs
-    fetch_disease_job = DataprocSubmitJobOperator(
-        task_id="fetch_disease",
-        job=DISEASE_FETCH,
-        region=REGION,
-        project_id=PROJECT_ID
-    )
-
-    fetch_infrastructure_job = DataprocSubmitJobOperator(
-        task_id="fetch_infrastructure",
-        job=INFRASTRUCTURE_FETCH,
-        region=REGION,
-        project_id=PROJECT_ID
-    )
-
-    fetch_our_world_job = DataprocSubmitJobOperator(
-        task_id="fetch_our_world",
-        job=OUR_WORLD_FETCH,
-        region=REGION,
-        project_id=PROJECT_ID
-    )
 
     # submit Spark job
     spark_job_clean = DataprocSubmitJobOperator(
@@ -199,7 +198,7 @@ with DAG(
     )
 
     # task dependencies
-    create_cluster >>\
     [fetch_disease_job, fetch_infrastructure_job, fetch_our_world_job] >>\
+    create_cluster >>\
     spark_job_clean >> spark_job_agg >> spark_job_merge >> spark_job_write_bigquery >>\
     delete_cluster
