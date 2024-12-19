@@ -8,3 +8,4 @@ apache-airflow
 gcsfs
 pytz
 pyspark
+bs4
