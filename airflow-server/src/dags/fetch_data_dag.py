@@ -55,6 +55,11 @@ OUR_WORLD_FETCH = {
     },
 }
 
+default_args = {
+    'start_date': days_ago(1),
+    'retries': 1,
+}
+
 # DAG definition
 with DAG(
     'dataproc_etl_pipeline',
