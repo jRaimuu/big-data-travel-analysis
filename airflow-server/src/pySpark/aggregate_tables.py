@@ -26,7 +26,7 @@ def aggregate_data_tables():
     # Reading all data from bucket
 
     # Read the data from our wolrd in data as it all has the same schema
-    annual_co2 = spark.read.csv(f"gs://{bucket}/annual_co2_emissions/", header=True, inferSchema=True)
+    annual_co2 = spark.read.csv(f"gs://{bucket}/annual_co2/", header=True, inferSchema=True)
     annual_ghe = spark.read.csv(f"gs://{bucket}/annual_ghe/", header=True, inferSchema=True)
     annual_deforest = spark.read.csv(f"gs://{bucket}/annual_deforest/", header=True, inferSchema=True)
     tree_cover_loss_wildfires = spark.read.csv(f"gs://{bucket}/tree_cover_loss_wildfires/", header=True, inferSchema=True)

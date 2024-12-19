@@ -40,6 +40,39 @@ CLUSTER_CONFIG = ClusterGenerator(
     ],
 ).make()
 
+DISEASE_FETCH = {
+    "reference": {"project_id": PROJECT_ID},
+    "placement": {"cluster_name": CLUSTER_NAME},
+    "pyspark_job": {
+        "main_python_file_uri": f"gs://{BUCKET_NAME}/scripts/jobs/fetch_apis/fetch_disease_data.py",
+        "python_file_uris": [
+            f"gs://{BUCKET_NAME}/scripts/dependencies/bucket_to_spark.env"
+        ], 
+    },
+}
+
+INFRASTRUCTURE_FETCH = {
+    "reference": {"project_id": PROJECT_ID},
+    "placement": {"cluster_name": CLUSTER_NAME},
+    "pyspark_job": {
+        "main_python_file_uri": f"gs://{BUCKET_NAME}/scripts/jobs/fetch_apis/fetch_infrastructure_data.py",
+        "python_file_uris": [
+            f"gs://{BUCKET_NAME}/scripts/dependencies/bucket_to_spark.env"
+        ], 
+    },
+}
+
+OUR_WORLD_FETCH = {
+    "reference": {"project_id": PROJECT_ID},
+    "placement": {"cluster_name": CLUSTER_NAME},
+    "pyspark_job": {
+        "main_python_file_uri": f"gs://{BUCKET_NAME}/scripts/jobs/fetch_apis/fetch_our_world_data.py",
+        "python_file_uris": [
+            f"gs://{BUCKET_NAME}/scripts/dependencies/bucket_to_spark.env"
+        ], 
+    },
+}
+
 PYSPARK_CLEAN = {
     "reference": {"project_id": PROJECT_ID},
     "placement": {"cluster_name": CLUSTER_NAME},
@@ -84,12 +117,6 @@ PYSPARK_WRITE_BIGQUERY = {
     },
 }
 
-def execute_pull_data():
-    script_path = "/tmp/pull_data.py"
-    bucket_path = f"gs://{BUCKET_NAME}/scripts/jobs/pull_data.py"
-    subprocess.run(["gsutil", "cp", bucket_path, script_path], check=True)
-    exec(open(script_path).read())
-
 default_args = {
     'start_date': days_ago(1),
     'retries': 1,
@@ -103,12 +130,6 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    # pull data from sources
-    pull_data = PythonOperator(
-        task_id="pull_data",
-        python_callable=execute_pull_data
-    )
-
     # create Dataproc cluster
     create_cluster = DataprocCreateClusterOperator(
         task_id="create_cluster",
@@ -116,6 +137,28 @@ with DAG(
         region=REGION,
         cluster_name=CLUSTER_NAME,
         cluster_config=CLUSTER_CONFIG,
+    )
+
+    # fetch data from APIs
+    fetch_disease_job = DataprocSubmitJobOperator(
+        task_id="fetch_disease",
+        job=DISEASE_FETCH,
+        region=REGION,
+        project_id=PROJECT_ID
+    )
+
+    fetch_infrastructure_job = DataprocSubmitJobOperator(
+        task_id="fetch_infrastructure",
+        job=INFRASTRUCTURE_FETCH,
+        region=REGION,
+        project_id=PROJECT_ID
+    )
+
+    fetch_our_world_job = DataprocSubmitJobOperator(
+        task_id="fetch_our_world",
+        job=OUR_WORLD_FETCH,
+        region=REGION,
+        project_id=PROJECT_ID
     )
 
     # submit Spark job
@@ -157,10 +200,7 @@ with DAG(
     )
 
     # task dependencies
-    pull_data >>\
     create_cluster >>\
-    spark_job_clean >>\
-    spark_job_agg >>\
-    spark_job_merge >>\
-    spark_job_write_bigquery >>\
+    [fetch_disease_job, fetch_infrastructure_job, fetch_our_world_job] >>\
+    spark_job_clean >> spark_job_agg >> spark_job_merge >> spark_job_write_bigquery >>\
     delete_cluster

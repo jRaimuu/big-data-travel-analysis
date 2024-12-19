@@ -15,7 +15,7 @@ def create_or_replace_table():
                         .config("parentProject", PARENT_PROJECT) \
                         .getOrCreate()
     
-    BUCKET_NAME = "travel-analysis-bucket"
+    BUCKET_NAME = ""
     INPUT_PATH = f"gs://{BUCKET_NAME}/aggregated/"
     REQUIRED_COLUMNS = set(["name", "year"])
 
@@ -26,7 +26,7 @@ def create_or_replace_table():
 
     # Insert the private project and dataset ids
     project_id = PARENT_PROJECT
-    dataset_id = ''
+    dataset_id = 'travel_dataset'
     
     for file in files_paths:
         df = spark.read.csv(file, header=True, inferSchema=True)

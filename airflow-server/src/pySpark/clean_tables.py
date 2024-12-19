@@ -1,4 +1,3 @@
-from email import header
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, trim
 from gcsfs import GCSFileSystem
@@ -28,7 +27,7 @@ def read_and_clean_csv(spark, file_path, output_path):
 
 def clean_data_tables():
     """Reads all CSVs from bucket to then get cleaned and exported"""
-    bucket = "travel-analysis-bucket"
+    BUCKET = "travel-analysis-bucket"
     spark = SparkSession.builder\
                         .appName("Clean CSV Data")\
                         .config("spark.jars", "https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar")\
@@ -37,9 +36,9 @@ def clean_data_tables():
                         .config("spark.hadoop.google.cloud.auth.null.enable", "true") \
                         .getOrCreate()
     
-    files = GCSFileSystem().ls(f"gs://{bucket}/")
+    files = GCSFileSystem().ls(f"gs://{BUCKET}/source_data")
     csv_files_paths = [f"gs://{file}" for file in files if file.endswith(".csv")]
-    output_path = f"gs://{bucket}/cleaned"
+    output_path = f"gs://{BUCKET}/cleaned"
 
     for file_path in csv_files_paths:
         read_and_clean_csv(spark, file_path, output_path)
