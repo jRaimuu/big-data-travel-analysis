@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 
 
 def pull_data():
-    BUCKET_NAME = "travel-analysis-bucket"
+    BUCKET_NAME = "travel-analysis-bucket/source_data"
 
     fetch_disease_death(BUCKET_NAME)
     fetch_infrastucture_data(BUCKET_NAME)
@@ -77,6 +77,7 @@ def fetch_our_world_data(BUCKET_NAME):
         "energy_consumption": "https://ourworldindata.org/grapher/primary-energy-cons.csv?v=1&csvType=full&useColumnShortNames=true",
         "gdp_ppp_per_capita": "https://ourworldindata.org/grapher/gdp-per-capita-worldbank.csv?v=1&csvType=full&useColumnShortNames=true",
         "gdp_nominal_per_capita": "https://ourworldindata.org/grapher/gdp-per-capita-world-bank-constant-usd.csv?v=1&csvType=full&useColumnShortNames=true",
+        "internet_penetration_rate": "https://ourworldindata.org/grapher/share-of-individuals-using-the-internet.csv?v=1&csvType=full&useColumnShortNames=true",
         "inflation_rate": "https://ourworldindata.org/grapher/inflation-of-consumer-prices.csv?v=1&csvType=full&useColumnShortNames=true",
         "international_tourist_trips": "https://ourworldindata.org/grapher/international-tourist-trips.csv?v=1&csvType=full&useColumnShortNames=true",
         "intl_tourist_spending": "https://ourworldindata.org/grapher/average-expenditures-of-tourists-abroad.csv?v=1&csvType=full&useColumnShortNames=true",

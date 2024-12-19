@@ -3,6 +3,8 @@ from pyspark.sql.types import StructField, StructType
 from gcsfs import GCSFileSystem
 
 def create_or_replace_table():
+    PARENT_PROJECT = ""
+
     spark = SparkSession.builder\
                         .appName("Upload to BigQuery")\
                         .config("spark.jars", "https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar")\
@@ -10,7 +12,7 @@ def create_or_replace_table():
                         .config("spark.hadoop.fs.gs.auth.service.account.enable", "false") \
                         .config("spark.hadoop.google.cloud.auth.null.enable", "true") \
                         .config('spark.jars.packages','com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.23.1') \
-                        .config("parentProject", "phonic-sunbeam-443308-r6") \
+                        .config("parentProject", PARENT_PROJECT) \
                         .getOrCreate()
     
     BUCKET_NAME = "travel-analysis-bucket"
@@ -23,7 +25,7 @@ def create_or_replace_table():
     files_paths = [f"gs://{file}" for file in files if not file.endswith('/')]
 
     # Insert the private project and dataset ids
-    project_id = ''
+    project_id = PARENT_PROJECT
     dataset_id = ''
     
     for file in files_paths:
